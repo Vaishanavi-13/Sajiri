@@ -1,0 +1,15 @@
+{
+  "name": "sajiri",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && nodemon server.js",
+    "client": "cd frontend && npm run dev",
+    "seed": "node backend/seed.js"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2",
+    "mongodb": "^7.3.0"
+  }
+}
