@@ -7,6 +7,7 @@ export default function Signup() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('user');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export default function Signup() {
     setSuccess('');
     setLoading(true);
     try {
-      const response = await API.post('/api/auth/register', { firstName, lastName, email, password });
+      const response = await API.post('/api/auth/register', { firstName, lastName, email, password, role });
       setSuccess(response.data.data?.message || 'Registered successfully.');
       setTimeout(() => navigate('/login'), 1200);
     } catch (err) {
@@ -44,6 +45,12 @@ export default function Signup() {
 
         <label htmlFor="password">Password</label>
         <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+
+        <label htmlFor="role">Role</label>
+        <select id="role" value={role} onChange={(e) => setRole(e.target.value)}>
+          <option value="user">User</option>
+          <option value="owner">Owner</option>
+        </select>
 
         {error && <div className="form-error">{error}</div>}
         {success && <div className="form-success">{success}</div>}

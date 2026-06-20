@@ -5,16 +5,17 @@
   --surface: #FFFFFF;
   --text: #1C1C1E;
   --muted: #6B7280;
-  --radius-card: 8px;
-  --radius-btn: 4px;
+  --radius-card: 16px;
+  --radius-btn: 999px;
+  --shadow: 0 16px 40px rgba(0,0,0,0.08);
 }
 
 *{box-sizing:border-box}
-body{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);margin:0}
+body{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:linear-gradient(180deg, #fef9f0 0%, #f7f2e6 100%);color:var(--text);margin:0}
 .container{max-width:1100px;margin:24px auto;padding:0 16px}
 
 .header{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
-.brand{font-family:'Playfair Display',serif;font-size:24px;color:var(--text)}
+.brand{font-family:'Playfair Display',serif;font-size:26px;color:var(--text);letter-spacing:1px}
 
 .card{background:var(--surface);border-radius:var(--radius-card);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}

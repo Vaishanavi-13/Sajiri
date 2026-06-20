@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import API from '../api/axios';
-import { clearCart, setCart } from '../store/cartSlice';
+import { clearCart } from '../store/cartSlice';
 
 export default function Checkout() {
   const auth = useSelector((state) => state.auth);
@@ -30,13 +30,26 @@ export default function Checkout() {
     setLoading(true);
     setError('');
     try {
-      const orderItems = cart.items.map((item) => ({ product: item.product._id || item.product, name: item.product.name, image: item.product.image || (item.product.images?.[0]?.url) || '', price: item.product.price, quantity: item.quantity }));
-      const totalPrice = cart.totalPrice;
+      const orderItems = cart.items.map((item) => {
+        const product = item.product || {};
+        const unitPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
+        return {
+          product: product._id || item.product,
+          name: product.name,
+          image: product.image || (product.images?.[0]?.url) || '',
+          price: unitPrice,
+          quantity: item.quantity,
+        };
+      });
+      const totalPrice = cart.items.reduce((total, item) => {
+        const product = item.product || {};
+        const unitPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
+        return total + unitPrice * item.quantity;
+      }, 0);
       const payload = { orderItems, shippingAddress: shipping, paymentMethod, totalPrice };
-      const response = await API.post('/api/orders', payload);
+      await API.post('/api/orders', payload);
       dispatch(clearCart());
       setMessage('Order placed successfully. You can track it in My Orders.');
-      setCart([]);
       setTimeout(() => navigate('/orders'), 1200);
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to place order');

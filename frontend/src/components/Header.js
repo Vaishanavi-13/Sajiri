@@ -29,6 +29,7 @@ export default function Header() {
         <Link to="/">Home</Link>
         <Link to="/cart">Cart{cart.totalItems ? ` (${cart.totalItems})` : ''}</Link>
         {auth.isAuthenticated && <Link to="/orders">My Orders</Link>}
+        {auth.isAuthenticated && (auth.user?.role === 'owner' || auth.user?.role === 'admin') && <Link to="/dashboard">Dashboard</Link>}
         {auth.isAuthenticated && auth.user?.role === 'admin' && <Link to="/admin">Admin</Link>}
         {!auth.isAuthenticated && <Link to="/login">Login</Link>}
         {!auth.isAuthenticated && <Link to="/signup">Signup</Link>}

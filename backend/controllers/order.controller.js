@@ -7,9 +7,12 @@ const Cart = require('../models/Cart.model');
 exports.createOrder = asyncHandler(async (req, res) => {
   const { orderItems, shippingAddress, paymentMethod, totalPrice } = req.body;
   const order = await Order.create({ user: req.user._id, orderItems, shippingAddress, paymentMethod, totalPrice });
-  const instance = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
-  const razor = await instance.orders.create({ amount: Math.round(totalPrice * 100), currency: 'INR', receipt: String(order._id) });
-  return require('../utils/response').success(res, { orderId: order._id, razorpay_order_id: razor.id });
+  if (paymentMethod === 'RAZORPAY') {
+    const instance = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
+    const razor = await instance.orders.create({ amount: Math.round(totalPrice * 100), currency: 'INR', receipt: String(order._id) });
+    return require('../utils/response').success(res, { orderId: order._id, razorpay_order_id: razor.id, order });
+  }
+  return require('../utils/response').success(res, { orderId: order._id, order });
 });
 
 exports.verifyPayment = asyncHandler(async (req, res) => {
@@ -37,6 +40,14 @@ exports.getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id).populate('user', 'firstName lastName email');
   if (!order) return require('../utils/response').error(res, 'Not found', 404);
   return require('../utils/response').success(res, order);
+});
+
+exports.getSellerOrders = asyncHandler(async (req, res) => {
+  const orders = await Order.find()
+    .populate({ path: 'orderItems.product', populate: { path: 'owner', select: 'firstName lastName email' } })
+    .populate('user', 'firstName lastName email');
+  const sellerOrders = orders.filter((order) => order.orderItems.some((item) => item.product?.owner?._id?.toString() === req.user._id.toString()));
+  return require('../utils/response').success(res, sellerOrders);
 });
 
 exports.getAllOrders = asyncHandler(async (req, res) => {

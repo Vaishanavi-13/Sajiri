@@ -10,15 +10,26 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [likesCount, setLikesCount] = useState(0);
+  const [liked, setLiked] = useState(false);
   const auth = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   useEffect(() => {
-    API.get(`/api/products/${id}`)
-      .then((r) => setProduct(r.data.data))
-      .catch(() => setProduct(null));
-  }, [id]);
+    const loadProduct = async () => {
+      try {
+        const response = await API.get(`/api/products/${id}`);
+        const item = response.data.data;
+        setProduct(item);
+        setLikesCount(item.likes?.length || 0);
+        setLiked(item.likes?.some((like) => like === auth.user?.id || like?._id === auth.user?.id));
+      } catch (err) {
+        setProduct(null);
+      }
+    };
+    loadProduct();
+  }, [id, auth.user]);
 
   const handleAddToCart = async () => {
     if (!auth.isAuthenticated) {
@@ -38,9 +49,24 @@ export default function ProductPage() {
     }
   };
 
+  const toggleLike = async () => {
+    if (!auth.isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    try {
+      const response = await API.put(`/api/products/${id}/like`);
+      setLikesCount(response.data.data.likes);
+      setLiked(response.data.data.liked);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (!product) return <div className="container">Loading...</div>;
 
   const imageSrc = product.image || (product.images?.[0]?.url) || '/placeholder.png';
+  const displayPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
 
   return (
     <div className="container">
@@ -51,8 +77,15 @@ export default function ProductPage() {
         <div style={{ width: 360, minWidth: 320 }}>
           <h1 style={{ fontFamily: 'Playfair Display' }}>{product.name}</h1>
           <div className="muted">{product.category}</div>
-          <h2>₹{product.price}</h2>
-          <p className="muted">{product.description}</p>
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h2>₹{displayPrice}</h2>
+            {product.discountPrice > 0 && <span style={{ textDecoration: 'line-through', color: '#a8a8a8' }}>₹{product.price}</span>}
+          </div>
+          <div style={{ marginTop: 6, color: '#6b7280' }}>{likesCount} likes</div>
+          <p className="muted" style={{ marginTop: 18 }}>{product.description}</p>
+          <button type="button" className="btn secondary" onClick={toggleLike} style={{ marginBottom: 16 }}>
+            {liked ? '♥ Liked' : '♡ Like'}
+          </button>
           <div style={{ marginTop: 16 }}>
             <label>
               Quantity

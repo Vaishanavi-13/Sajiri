@@ -85,7 +85,8 @@ export default function Cart() {
                 <img src={item.product.image || (item.product.images && item.product.images[0]?.url) || '/placeholder.png'} alt={item.product.name} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }} />
                 <div style={{ flex: 1 }}>
                   <h3>{item.product.name}</h3>
-                  <div className="muted">₹{item.product.price} each</div>
+                  <div className="muted">₹{item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price} each</div>
+                  {item.product.discountPrice > 0 && <div style={{ color: '#a8a8a8', fontSize: 14 }}>Original ₹{item.product.price}</div>}
                   <div style={{ marginTop: 8 }}>
                     <label>
                       Qty
@@ -94,7 +95,7 @@ export default function Cart() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700 }}>₹{(item.quantity * item.product.price).toFixed(0)}</div>
+                  <div style={{ fontWeight: 700 }}>₹{(item.quantity * (item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price)).toFixed(0)}</div>
                   <button className="btn secondary" type="button" onClick={() => handleRemove(item.product._id || item.product)} disabled={loading}>Remove</button>
                 </div>
               </div>

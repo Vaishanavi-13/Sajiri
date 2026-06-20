@@ -8,6 +8,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Orders from './pages/Orders';
 import AdminDashboard from './pages/AdminDashboard';
+import OwnerDashboard from './pages/OwnerDashboard';
+import CreateProduct from './pages/CreateProduct';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
@@ -24,6 +26,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/dashboard" element={<OwnerDashboard />} />
+          <Route path="/create-product" element={<CreateProduct />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>

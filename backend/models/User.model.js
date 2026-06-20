@@ -1,13 +1,14 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
+  name: { type: String, required: true },
+  firstName: { type: String },
+  lastName: { type: String },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   profilePic: { type: String, default: '' },
   publicId: { type: String, default: '' },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  role: { type: String, enum: ['user', 'owner', 'admin'], default: 'user' },
   token: { type: String },
   isVerified: { type: Boolean, default: false },
   isLoggedIn: { type: Boolean, default: false },

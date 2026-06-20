@@ -7,6 +7,7 @@ const { admin } = require('../middleware/admin.middleware');
 router.post('/', protect, orderCtrl.createOrder);
 router.post('/verify-payment', protect, orderCtrl.verifyPayment);
 router.get('/my-orders', protect, orderCtrl.getMyOrders);
+router.get('/seller-orders', protect, orderCtrl.getSellerOrders);
 router.get('/:id', protect, orderCtrl.getOrderById);
 router.get('/', protect, admin, orderCtrl.getAllOrders);
 router.put('/:id/status', protect, admin, orderCtrl.updateStatus);

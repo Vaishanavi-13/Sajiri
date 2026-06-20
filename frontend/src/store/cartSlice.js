@@ -4,7 +4,11 @@ const initialState = { items: [], totalItems: 0, totalPrice: 0 };
 
 const calcTotals = (items) => {
   let totalItems = 0; let totalPrice = 0;
-  items.forEach(i=>{ totalItems += i.quantity; totalPrice += (i.quantity * (i.price || 0)); });
+  items.forEach((i) => {
+    const itemPrice = i.price ?? ((i.product?.discountPrice > 0) ? i.product?.discountPrice : (i.product?.price || 0));
+    totalItems += i.quantity;
+    totalPrice += i.quantity * itemPrice;
+  });
   return { totalItems, totalPrice };
 }
 

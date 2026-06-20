@@ -5,24 +5,68 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendVerificationEmail, sendOtpEmail } = require('../utils/email');
 
-const createAccessToken = (user) => jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-const createRefreshToken = (user) => jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, { expiresIn: '7d' });
+const createAccessToken = (user) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return jwt.sign({
+    id: user._id,
+    role: user.role,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    name: user.name,
+    email: user.email,
+  }, process.env.JWT_SECRET, { expiresIn: '15m' });
+};
+const createRefreshToken = (user) => {
+  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_REFRESH_SECRET or JWT_SECRET is not configured');
+  }
+  return jwt.sign({
+    id: user._id,
+    role: user.role,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    name: user.name,
+    email: user.email,
+  }, secret, { expiresIn: '7d' });
+};
 
 exports.register = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
-  if (!firstName || !lastName || !email || !password) return res.status(400).json({ message: 'Missing fields' });
+  const { firstName, lastName, email, password, role = 'user' } = req.body;
+  if (!firstName || !lastName || !email || !password) return res.status(400).json({ message: 'Missing required fields' });
+  if (!['user', 'owner', 'admin'].includes(role)) return res.status(400).json({ message: 'Invalid role' });
   const exists = await User.findOne({ email });
-  if (exists) return res.status(400).json({ message: 'User exists' });
+  if (exists) return res.status(400).json({ message: 'User already exists' });
+
   const hashed = await bcrypt.hash(password, 10);
-  const user = await User.create({ firstName, lastName, email, password: hashed, isVerified: true });
+  const user = await User.create({
+    name: `${firstName} ${lastName}`,
+    firstName,
+    lastName,
+    email,
+    password: hashed,
+    role,
+    isVerified: true,
+  });
+
   try {
     const token = jwt.sign({ id: user._id }, process.env.JWT_EMAIL_SECRET || process.env.JWT_SECRET, { expiresIn: '10m' });
     await sendVerificationEmail(user.email, token);
   } catch (emailErr) {
     console.warn('Verification email skipped:', emailErr.message);
   }
+
   const { success } = require('../utils/response');
-  return success(res, { message: 'Registered successfully. Please check your email if configured.' });
+  return success(res, {
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  });
 });
 
 exports.verifyEmail = asyncHandler(async (req, res) => {
@@ -47,13 +91,29 @@ exports.login = asyncHandler(async (req, res) => {
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
   if (!user.isVerified) return res.status(403).json({ message: 'Email not verified' });
-  const accessToken = createAccessToken(user);
-  const refreshToken = createRefreshToken(user);
+  let accessToken;
+  let refreshToken;
+  try {
+    accessToken = createAccessToken(user);
+    refreshToken = createRefreshToken(user);
+  } catch (err) {
+    console.error('JWT generation error:', err.message);
+    return res.status(500).json({ message: 'Server JWT configuration error' });
+  }
   user.isLoggedIn = true;
   await user.save();
   res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000 });
   const { success } = require('../utils/response');
-  return success(res, { accessToken, user: { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email } });
+  return success(res, {
+    accessToken,
+    user: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    },
+  });
 });
 
 exports.logout = asyncHandler(async (req, res) => {
