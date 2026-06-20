@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import API from '../api/axios';
 import { setCart, removeItem, updateItem, clearCart } from '../store/cartSlice';
+import { getProductImage } from '../utils/productImages';
 
 export default function Cart() {
   const [loading, setLoading] = useState(false);
@@ -65,54 +66,65 @@ export default function Cart() {
 
   if (!auth.isAuthenticated) {
     return (
-      <div className="container card">
-        <h2>Cart</h2>
-        <p>Please <Link to="/login">login</Link> to view your cart.</p>
+      <div className="container">
+        <div className="card">
+          <h2 className="page-title">Cart</h2>
+          <p>Please <Link to="/login">login</Link> to view your cart.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <h2>Your Cart</h2>
-      <div className="card">
+    <div className="container cart-page">
+      <h1 className="page-title">Your Cart</h1>
+      <div className="cart-summary card">
         {cart.items.length === 0 ? (
-          <div>Your cart is empty. <Link to="/">Shop the marketplace</Link></div>
+          <div className="empty-state">Your cart is empty. <Link to="/">Shop the marketplace</Link></div>
         ) : (
           <>
             {cart.items.map((item) => (
-              <div key={item.product._id || item.product} style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
-                <img src={item.product.image || (item.product.images && item.product.images[0]?.url) || '/placeholder.png'} alt={item.product.name} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }} />
-                <div style={{ flex: 1 }}>
+              <div key={item.product._id || item.product} className="cart-item">
+                <img
+                  src={getProductImage(item.product)}
+                  alt={item.product.name}
+                  onError={(event) => {
+                    event.target.onerror = null;
+                    event.target.src = '/placeholder.png';
+                  }}
+                />
+                <div className="cart-item-content">
                   <h3>{item.product.name}</h3>
                   <div className="muted">₹{item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price} each</div>
-                  {item.product.discountPrice > 0 && <div style={{ color: '#a8a8a8', fontSize: 14 }}>Original ₹{item.product.price}</div>}
-                  <div style={{ marginTop: 8 }}>
-                    <label>
-                      Qty
-                      <input type="number" min="1" value={item.quantity} onChange={(e) => handleQuantityChange(item.product._id || item.product, Number(e.target.value))} style={{ width: 72, marginLeft: 8 }} />
-                    </label>
+                  {item.product.discountPrice > 0 && <div className="muted">Original ₹{item.product.price}</div>}
+                  <div>
+                    <label htmlFor={`qty-${item.product._id || item.product}`}>Qty</label>
+                    <input
+                      id={`qty-${item.product._id || item.product}`}
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => handleQuantityChange(item.product._id || item.product, Number(e.target.value))}
+                    />
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div className="cart-item-actions">
                   <div style={{ fontWeight: 700 }}>₹{(item.quantity * (item.product.discountPrice > 0 ? item.product.discountPrice : item.product.price)).toFixed(0)}</div>
                   <button className="btn secondary" type="button" onClick={() => handleRemove(item.product._id || item.product)} disabled={loading}>Remove</button>
                 </div>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
-              <div>
-                <p className="muted">Total Items: {cart.totalItems}</p>
-                <p className="muted">Total Price: ₹{cart.totalPrice.toFixed(0)}</p>
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
+            <div className="cart-summary-total">
+              <div className="muted">Total Items: {cart.totalItems}</div>
+              <div className="muted">Total Price: ₹{cart.totalPrice.toFixed(0)}</div>
+              <div className="cart-item-actions" style={{ justifyItems: 'start' }}>
                 <button className="btn secondary" type="button" onClick={handleClear} disabled={loading}>Clear Cart</button>
-                <button className="btn" type="button" onClick={() => navigate('/checkout')} disabled={loading}>Checkout</button>
+                <button className="btn btn-primary" type="button" onClick={() => navigate('/checkout')} disabled={loading}>Checkout</button>
               </div>
             </div>
           </>
         )}
-        {error && <div className="form-error" style={{ marginTop: 12 }}>{error}</div>}
+        {error && <div className="form-error">{error}</div>}
       </div>
     </div>
   );

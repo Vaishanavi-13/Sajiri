@@ -45,67 +45,83 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="container">
-      <section className="hero card" style={{ marginBottom: 20 }}>
-        <div style={{ flex: 1 }}>
-          <h1>Sajiri — Regal Indian Fashion</h1>
-          <p className="muted">Discover handpicked sarees, artisan lehengas, and elegant menswear in a curated luxury collection.</p>
-          <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="btn">Shop Sarees</button>
-            <button className="btn secondary">Explore All</button>
+    <div className="home-shell">
+      <section className="hero-section card fade-up">
+        <div className="hero-copy">
+          <span className="eyebrow">Luxury Edit</span>
+          <h1>Elevate every celebration with timeless Indian fashion.</h1>
+          <p className="hero-text">Discover handcrafted sarees, festive lehengas, and refined menswear designed for weddings, special occasions, and everyday glamour.</p>
+          <div className="hero-actions">
+            <button type="button" className="btn btn-primary" onClick={() => setCategory('Women')}>Shop Sarees</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setCategory('All')}>Explore Collection</button>
           </div>
         </div>
-        <div style={{ width: 340, minWidth: 220 }}>
-          <img src="/hero-saree.jpg" alt="hero" style={{ width: '100%', borderRadius: 8 }} />
+
+        <div className="hero-visual">
+          <img
+            src="https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=970&q=80"
+            alt="Regal fashion banner"
+          />
         </div>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+      <section className="product-explore">
+        <div className="section-header">
           <div>
+            <span className="eyebrow">Curated Marketplace</span>
+            <h2>Shop by category</h2>
+          </div>
+          <div className="filters-row">
             {categories.map((cat) => (
               <button
                 key={cat}
-                className={`btn ${category === cat ? '' : 'secondary'}`}
                 type="button"
+                className={`filter-pill ${category === cat ? 'active' : ''}`}
                 onClick={() => setCategory(cat)}
-                style={{ opacity: category === cat ? 1 : 0.75 }}
               >
                 {cat}
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <input
-              type="search"
-              placeholder="Search designer collections"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ccc', minWidth: 220 }}
-            />
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #ccc' }}>
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        <div>
-          <h2>Marketplace</h2>
+        <div className="search-actions">
+          <input
+            type="search"
+            className="search-input"
+            placeholder="Search designer collections"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select className="select-input" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="marketplace-block">
+          <div className="section-title-row">
+            <h2>Marketplace</h2>
+            <p className="muted">Handpicked fashion pieces for a premium wardrobe.</p>
+          </div>
+
           {loading ? (
-            <p>Loading products...</p>
+            <p className="loading-text">Loading products...</p>
           ) : (
             <div className="product-grid">
-              {products.length ? products.map((p) => <ProductCard key={p._id} p={p} />) : <div>No products found.</div>}
+              {products.length ? products.map((p) => <ProductCard key={p._id} p={p} />) : <div className="empty-state">No products found.</div>}
             </div>
           )}
         </div>
       </section>
 
       {featured.length > 0 && (
-        <section>
-          <h2>Featured Collections</h2>
+        <section className="featured-shell fade-up">
+          <div className="section-title-row">
+            <h2>Featured Collections</h2>
+            <p className="muted">Seasonal favorites and customer-loved styles.</p>
+          </div>
           <div className="product-grid">
             {featured.map((p) => <ProductCard key={p._id} p={p} />)}
           </div>

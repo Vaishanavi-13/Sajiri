@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import API from '../api/axios';
+import { getProductImage } from '../utils/productImages';
 
 export default function Orders() {
   const auth = useSelector((state) => state.auth);
@@ -27,9 +28,9 @@ export default function Orders() {
   }
 
   return (
-    <div className="container">
-      <div className="card">
-        <h2>My Orders</h2>
+    <div className="container orders-page">
+      <h1 className="page-title">My Orders</h1>
+      <div className="order-card card">
         {loading ? (
           <p>Loading orders...</p>
         ) : error ? (
@@ -37,24 +38,30 @@ export default function Orders() {
         ) : orders.length === 0 ? (
           <p>No orders yet. <Link to="/">Start shopping</Link>.</p>
         ) : (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className="order-item-list">
             {orders.map((order) => (
-              <div key={order._id} className="card" style={{ padding: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap' }}>
-                  <div>
-                    <h3>Order #{order._id.slice(-6)}</h3>
-                    <div className="muted">Placed on {new Date(order.createdAt).toLocaleDateString()}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div>Status: <strong>{order.status}</strong></div>
-                    <div>Total: ₹{order.totalPrice?.toFixed(0)}</div>
-                  </div>
+              <div key={order._id} className="order-item">
+                <div>
+                  <h3>Order #{order._id.slice(-6)}</h3>
+                  <div className="muted">Placed on {new Date(order.createdAt).toLocaleDateString()}</div>
                 </div>
-                <div style={{ marginTop: 14 }}>
-                  <h4>Items</h4>
+                <div className="order-item-content">
+                  <div>Status: <strong>{order.status}</strong></div>
+                  <div>Total: ₹{order.totalPrice?.toFixed(0)}</div>
+                </div>
+                <div className="order-item-actions">
                   {order.orderItems.map((item) => (
-                    <div key={item.product} style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10 }}>
-                      <img src={item.image || '/placeholder.png'} alt={item.name} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }} />
+                    <div key={typeof item.product === 'object' && item.product !== null ? item.product._id || item.name : item.product || item.name}
+                      className="order-item"
+                    >
+                      <img
+                        src={getProductImage(typeof item.product === 'object' && item.product !== null ? item.product : item)}
+                        alt={item.name}
+                        onError={(event) => {
+                          event.target.onerror = null;
+                          event.target.src = '/placeholder.png';
+                        }}
+                      />
                       <div>
                         <div>{item.name}</div>
                         <small className="muted">Qty: {item.quantity} · ₹{item.price}</small>

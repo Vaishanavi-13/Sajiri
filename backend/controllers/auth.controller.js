@@ -5,6 +5,24 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendVerificationEmail, sendOtpEmail } = require('../utils/email');
 
+const buildAuthResponse = (user) => {
+  const accessToken = createAccessToken(user);
+  return {
+    success: true,
+    data: {
+      accessToken,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    },
+  };
+};
+
 const createAccessToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured');
@@ -34,10 +52,13 @@ const createRefreshToken = (user) => {
 };
 
 exports.register = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password, role = 'user' } = req.body;
+  const { firstName, lastName, email, password } = req.body;
   if (!firstName || !lastName || !email || !password) return res.status(400).json({ message: 'Missing required fields' });
-  if (!['user', 'owner', 'admin'].includes(role)) return res.status(400).json({ message: 'Invalid role' });
-  const exists = await User.findOne({ email });
+  const normalizedEmail = email.trim().toLowerCase();
+  if (normalizedEmail === process.env.OWNER_EMAIL?.trim().toLowerCase()) {
+    return res.status(400).json({ message: 'Registration using owner email is disabled' });
+  }
+  const exists = await User.findOne({ email: normalizedEmail });
   if (exists) return res.status(400).json({ message: 'User already exists' });
 
   const hashed = await bcrypt.hash(password, 10);
@@ -45,9 +66,9 @@ exports.register = asyncHandler(async (req, res) => {
     name: `${firstName} ${lastName}`,
     firstName,
     lastName,
-    email,
+    email: normalizedEmail,
     password: hashed,
-    role,
+    role: 'user',
     isVerified: true,
   });
 
@@ -86,11 +107,66 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
 
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email });
+  const normalizedEmail = email.trim().toLowerCase();
+  const ownerEmail = process.env.OWNER_EMAIL?.trim().toLowerCase();
+
+  if (ownerEmail && normalizedEmail === ownerEmail) {
+    const ownerPassword = process.env.OWNER_PASSWORD;
+    if (!ownerPassword) return res.status(500).json({ message: 'Owner password is not configured' });
+    const ownerName = process.env.OWNER_NAME?.trim() || 'Sajiri Owner';
+    let owner = await User.findOne({ email: ownerEmail });
+    if (!owner) {
+      const hashed = await bcrypt.hash(ownerPassword, 10);
+      owner = await User.create({
+        name: ownerName,
+        firstName: ownerName.split(' ')[0] || ownerName,
+        lastName: ownerName.split(' ').slice(1).join(' ') || '',
+        email: ownerEmail,
+        password: hashed,
+        role: 'owner',
+        isVerified: true,
+      });
+    } else if (owner.role !== 'owner') {
+      owner.role = 'owner';
+      await owner.save();
+    }
+
+    const ok = await bcrypt.compare(password, owner.password);
+    if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
+
+    let accessToken;
+    let refreshToken;
+    try {
+      accessToken = createAccessToken(owner);
+      refreshToken = createRefreshToken(owner);
+    } catch (err) {
+      console.error('JWT generation error:', err.message);
+      return res.status(500).json({ message: 'Server JWT configuration error' });
+    }
+
+    owner.isLoggedIn = true;
+    await owner.save();
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000 });
+    const { success } = require('../utils/response');
+    return success(res, {
+      accessToken,
+      user: {
+        id: owner._id,
+        firstName: owner.firstName,
+        lastName: owner.lastName,
+        name: owner.name,
+        email: owner.email,
+        role: owner.role,
+      },
+    });
+  }
+
+  const user = await User.findOne({ email: normalizedEmail });
   if (!user) return res.status(401).json({ message: 'Invalid credentials' });
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
   if (!user.isVerified) return res.status(403).json({ message: 'Email not verified' });
+
   let accessToken;
   let refreshToken;
   try {
@@ -100,6 +176,7 @@ exports.login = asyncHandler(async (req, res) => {
     console.error('JWT generation error:', err.message);
     return res.status(500).json({ message: 'Server JWT configuration error' });
   }
+
   user.isLoggedIn = true;
   await user.save();
   res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000 });

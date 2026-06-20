@@ -8,6 +8,20 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// File filter for allowed image formats
+const fileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+  
+  const fileExt = path.extname(file.originalname).toLowerCase();
+  
+  if (allowedMimeTypes.includes(file.mimetype) && allowedExtensions.includes(fileExt)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`File type not allowed. Allowed types: JPG, PNG, WebP`), false);
+  }
+};
+
 if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
   const cloudinary = require('cloudinary').v2;
   const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -22,7 +36,7 @@ if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && proce
     cloudinary,
     params: {
       folder: 'sajiri',
-      allowed_formats: ['jpg', 'png', 'jpeg'],
+      allowed_formats: ['jpg', 'png', 'jpeg','webp'],
     },
   });
 } else {
@@ -32,6 +46,10 @@ if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && proce
   });
 }
 
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ 
+  storage, 
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter 
+});
 
 module.exports = upload;

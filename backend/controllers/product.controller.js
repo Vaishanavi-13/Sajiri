@@ -2,42 +2,97 @@ const asyncHandler = require('express-async-handler');
 const Product = require('../models/Product.model');
 
 exports.createProduct = asyncHandler(async (req, res) => {
-  // auth checks: ensure JWT middleware attached user
-  if (!req.user) return require('../utils/response').error(res, 'Not authenticated', 401);
-  // Only owners and admins allowed
-  if (req.user.role !== 'owner' && req.user.role !== 'admin') return require('../utils/response').error(res, 'Owner access required', 403);
+  try {
+    // auth checks: ensure JWT middleware attached user
+    if (!req.user) return require('../utils/response').error(res, 'Not authenticated', 401);
+    // Only owners allowed
+    if (req.user.role !== 'owner') return require('../utils/response').error(res, 'Owner access required', 403);
 
-  const { name, description, category, price, discountPrice = 0, stock = 0, isFeatured = false } = req.body;
-  if (!name || !description || !category || !price) return require('../utils/response').error(res, 'Missing required product fields', 400);
+    const { name, description, category, price, discountPrice = '0', stock = '0', isFeatured = 'false' } = req.body;
+    if (!name || !description || !category || !price) return require('../utils/response').error(res, 'Missing required product fields', 400);
 
-  const files = req.files || [];
-  const urls = files.map((file) => file.path || file.filename || '');
-  const mainImage = urls[0] || '';
-  const images = urls.slice(1);
+    // Convert string values from FormData to proper types
+    const priceNum = parseFloat(price);
+    const discountPriceNum = parseFloat(discountPrice) || 0;
+    const stockNum = parseInt(stock) || 0;
+    const isFeaturedBool = isFeatured === 'true' || isFeatured === true;
 
-  const sellerName = req.user?.name || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim();
+    // Validate numeric conversions
+    if (isNaN(priceNum) || priceNum <= 0) return require('../utils/response').error(res, 'Price must be a valid positive number', 400);
+    if (discountPriceNum < 0) return require('../utils/response').error(res, 'Discount price cannot be negative', 400);
+    if (stockNum < 0) return require('../utils/response').error(res, 'Stock cannot be negative', 400);
 
-  const product = await Product.create({
-    name,
-    description,
-    category,
-    price,
-    discountPrice,
-    stock,
-    mainImage,
-    images,
-    image: mainImage,
-    imagesMeta: files.map((file) => ({ url: file.path || file.filename || '', publicId: file.filename || file.public_id || '' })),
-    likes: [],
-    isFeatured: isFeatured === 'true' || isFeatured === true,
-    owner: req.user._id,
-    createdBy: req.user._id,
-    sellerName,
-    status: 'pending',
-  });
+    const files = req.files || [];
 
-  const { success } = require('../utils/response');
-  return success(res, product);
+    // Normalize file URLs: prefer file.path, fall back to filename served under /uploads
+    const normalizeFileUrl = (file) => {
+      if (!file) return '';
+      if (file.path) return file.path;
+      if (file.location) return file.location; // multer-storage-cloudinary may set 'location'
+      if (file.url) return file.url;
+      if (file.filename) return `/uploads/${file.filename}`;
+      return '';
+    };
+
+    const urls = files.map((f) => normalizeFileUrl(f)).filter(Boolean);
+    const mainImage = urls[0] || '';
+    const images = urls.slice(1);
+
+    const sellerName = req.user?.name || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || 'Unknown Seller';
+
+    // Log payload for debugging before creating the product
+    console.log('createProduct payload:', {
+      name,
+      description,
+      category,
+      price: priceNum,
+      discountPrice: discountPriceNum,
+      stock: stockNum,
+      mainImage,
+      images,
+      imagesMeta: files.map((file) => ({ url: normalizeFileUrl(file), publicId: file.filename || file.public_id || '' })),
+      isFeatured: isFeaturedBool,
+      owner: req.user?._id,
+      createdBy: req.user?._id,
+      sellerName,
+    });
+
+    const product = await Product.create({
+      name,
+      description,
+      category,
+      price: priceNum,
+      discountPrice: discountPriceNum,
+      stock: stockNum,
+      mainImage,
+      images,
+      image: mainImage,
+      imagesMeta: files.map((file) => ({ url: normalizeFileUrl(file), publicId: file.filename || file.public_id || '' })),
+      likes: [],
+      isFeatured: isFeaturedBool,
+      owner: req.user._id,
+      createdBy: req.user._id,
+      sellerName,
+      status: 'approved',
+    });
+
+    const { success } = require('../utils/response');
+    return success(res, product);
+  } catch (err) {
+    // Log full error for server-side debugging
+    console.error('createProduct error:', err && err.stack ? err.stack : err);
+
+    // If this is a Mongoose validation error, return a 400 with details
+    if (err && err.name === 'ValidationError') {
+      const details = Object.keys(err.errors || {}).reduce((acc, key) => {
+        acc[key] = err.errors[key].message;
+        return acc;
+      }, {});
+      return require('../utils/response').error(res, `Validation failed: ${err.message}`, 400);
+    }
+
+    return require('../utils/response').error(res, 'Server error while creating product', 500);
+  }
 });
 
 exports.getProduct = asyncHandler(async (req, res) => {

@@ -29,37 +29,75 @@ export default function CreateProduct() {
     setLoading(true);
 
     try {
+      // Validate form before submission
+      if (!form.name.trim()) {
+        setError('Product name is required');
+        setLoading(false);
+        return;
+      }
+      if (!form.description.trim()) {
+        setError('Product description is required');
+        setLoading(false);
+        return;
+      }
+      if (!form.price || parseFloat(form.price) <= 0) {
+        setError('Price must be a positive number');
+        setLoading(false);
+        return;
+      }
+      if (form.discountPrice && parseFloat(form.discountPrice) < 0) {
+        setError('Discount price cannot be negative');
+        setLoading(false);
+        return;
+      }
+      if (form.stock && parseFloat(form.stock) < 0) {
+        setError('Stock cannot be negative');
+        setLoading(false);
+        return;
+      }
+
       const payload = new FormData();
-      payload.append('name', form.name);
-      payload.append('description', form.description);
+      payload.append('name', form.name.trim());
+      payload.append('description', form.description.trim());
       payload.append('category', form.category);
-      payload.append('price', form.price);
-      payload.append('discountPrice', form.discountPrice || 0);
-      payload.append('stock', form.stock || 0);
-      payload.append('isFeatured', form.isFeatured);
+      payload.append('price', parseFloat(form.price).toString());
+      payload.append('discountPrice', form.discountPrice ? parseFloat(form.discountPrice).toString() : '0');
+      payload.append('stock', form.stock ? parseInt(form.stock).toString() : '0');
+      payload.append('isFeatured', form.isFeatured ? 'true' : 'false');
       images.forEach((file) => payload.append('images', file));
 
       const token = auth.accessToken || (typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
-      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      const config = {
+        withCredentials: true,
+        headers: {},
+      };
+      if (token) config.headers.Authorization = `Bearer ${token}`;
 
-      await API.post('/api/products/create', payload, config);
+      const response = await API.post('/api/products', payload, config);
       setSuccess('Product submitted for approval.');
+      console.log('Product created successfully:', response.data);
       setTimeout(() => navigate('/dashboard'), 1200);
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to submit product');
+      console.error('Error creating product:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Unable to submit product';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!auth.isAuthenticated || (auth.user?.role !== 'owner' && auth.user?.role !== 'admin')) {
+    if (!auth.isAuthenticated || auth.user?.role !== 'owner') {
       navigate('/login');
     }
   }, [auth.isAuthenticated, auth.user, navigate]);
 
   if (!auth.isAuthenticated) {
     return null;
+  }
+
+  if (auth.user?.role !== 'owner') {
+    return <div className="container"><p className="form-error">Access denied. Only owners may create products.</p></div>;
   }
 
   return (
@@ -94,7 +132,7 @@ export default function CreateProduct() {
         </label>
 
         <label>Images</label>
-        <input type="file" multiple accept="image/*" onChange={handleFileChange} />
+        <input type="file" multiple accept="image/*,.webp" onChange={handleFileChange} />
 
         {error && <div className="form-error">{error}</div>}
         {success && <div className="form-success">{success}</div>}

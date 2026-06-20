@@ -2,7 +2,7 @@ import axios from 'axios';
 import store from '../store';
 import { logout, setAccessToken } from '../store/authSlice';
 
-const API = axios.create({ baseURL: process.env.REACT_APP_API || 'http://localhost:8000/api' });
+const API = axios.create({ baseURL: process.env.REACT_APP_API || 'http://localhost:8000/api', withCredentials: true });
 
 // request interceptor
 API.interceptors.request.use((config) => {
@@ -24,6 +24,7 @@ API.interceptors.response.use((res) => res, async (err) => {
       if (accessToken) {
         store.dispatch(setAccessToken(accessToken));
         original.headers.Authorization = `Bearer ${accessToken}`;
+        original.withCredentials = true;
         return axios(original);
       }
     } catch (e) {

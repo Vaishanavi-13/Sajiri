@@ -7,8 +7,8 @@ import Checkout from './pages/Checkout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Orders from './pages/Orders';
-import AdminDashboard from './pages/AdminDashboard';
 import OwnerDashboard from './pages/OwnerDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import CreateProduct from './pages/CreateProduct';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -17,7 +17,7 @@ function App() {
   return (
     <div className="app-root">
       <Header />
-      <main className="container">
+      <main className="app-main container">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<ProductPage />} />
@@ -26,6 +26,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/owner" element={<OwnerDashboard />} />
           <Route path="/dashboard" element={<OwnerDashboard />} />
           <Route path="/create-product" element={<CreateProduct />} />
           <Route path="/admin" element={<AdminDashboard />} />

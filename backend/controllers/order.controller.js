@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Order = require('../models/Order.model');
+const Product = require('../models/Product.model');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Cart = require('../models/Cart.model');
@@ -32,22 +33,30 @@ exports.verifyPayment = asyncHandler(async (req, res) => {
 });
 
 exports.getMyOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({ user: req.user._id });
+  const orders = await Order.find({ user: req.user._id })
+    .populate('orderItems.product', 'name image category subCategory');
   return require('../utils/response').success(res, orders);
 });
 
 exports.getOrderById = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id).populate('user', 'firstName lastName email');
+  const order = await Order.findById(req.params.id)
+    .populate('user', 'firstName lastName email')
+    .populate('orderItems.product', 'name image category subCategory');
   if (!order) return require('../utils/response').error(res, 'Not found', 404);
   return require('../utils/response').success(res, order);
 });
 
 exports.getSellerOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find()
-    .populate({ path: 'orderItems.product', populate: { path: 'owner', select: 'firstName lastName email' } })
-    .populate('user', 'firstName lastName email');
-  const sellerOrders = orders.filter((order) => order.orderItems.some((item) => item.product?.owner?._id?.toString() === req.user._id.toString()));
-  return require('../utils/response').success(res, sellerOrders);
+  const ownerId = req.user._id;
+  const ownedProducts = await Product.find({ owner: ownerId }).select('_id');
+  if (!ownedProducts.length) {
+    return require('../utils/response').success(res, []);
+  }
+  const ownedProductIds = ownedProducts.map((product) => product._id);
+  const orders = await Order.find({ 'orderItems.product': { $in: ownedProductIds } })
+    .populate('user', 'firstName lastName email')
+    .populate('orderItems.product', 'name image category subCategory');
+  return require('../utils/response').success(res, orders);
 });
 
 exports.getAllOrders = asyncHandler(async (req, res) => {

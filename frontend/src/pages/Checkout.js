@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import API from '../api/axios';
 import { clearCart } from '../store/cartSlice';
+import { getProductImage } from '../utils/productImages';
 
 export default function Checkout() {
   const auth = useSelector((state) => state.auth);
@@ -36,7 +37,9 @@ export default function Checkout() {
         return {
           product: product._id || item.product,
           name: product.name,
-          image: product.image || (product.images?.[0]?.url) || '',
+          image: getProductImage(product),
+          category: product.category || item.category || '',
+          subCategory: product.subCategory || item.subCategory || '',
           price: unitPrice,
           quantity: item.quantity,
         };
@@ -59,11 +62,14 @@ export default function Checkout() {
   };
 
   return (
-    <div className="container card">
-      <h2>Checkout</h2>
-      <div style={{ display: 'grid', gap: 18 }}>
-        <div>
-          <h3>Delivery Information</h3>
+    <div className="container checkout-page">
+      <div className="checkout-card card">
+        <h1 className="page-title">Checkout</h1>
+        <div className="checkout-summary">
+          <div>
+            <h3>Delivery Information</h3>
+            <p className="muted">Complete your order with a secure shipping address.</p>
+          </div>
           <form className="auth-form" onSubmit={handleSubmit}>
             <label htmlFor="address">Address</label>
             <input id="address" value={shipping.address} onChange={(e) => setShipping({ ...shipping, address: e.target.value })} required />
@@ -78,12 +84,10 @@ export default function Checkout() {
               <option value="COD">Cash on Delivery</option>
               <option value="RAZORPAY">Pay with Razorpay</option>
             </select>
-            <div style={{ marginTop: 12 }}>
-              <strong>Order Total:</strong> ₹{cart.totalPrice.toFixed(0)}
-            </div>
+            <div className="muted">Order Total: ₹{cart.totalPrice.toFixed(0)}</div>
             {error && <div className="form-error">{error}</div>}
             {message && <div className="form-success">{message}</div>}
-            <button className="btn" type="submit" disabled={loading}>{loading ? 'Placing order...' : 'Place Order'}</button>
+            <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Placing order...' : 'Place Order'}</button>
           </form>
         </div>
       </div>

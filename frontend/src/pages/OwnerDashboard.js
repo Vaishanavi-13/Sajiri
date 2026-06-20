@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import API from '../api/axios';
+import { getProductImage } from '../utils/productImages';
 
 export default function OwnerDashboard() {
   const auth = useSelector((state) => state.auth);
@@ -12,7 +13,7 @@ export default function OwnerDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!auth.isAuthenticated || (auth.user?.role !== 'owner' && auth.user?.role !== 'admin')) {
+    if (!auth.isAuthenticated || auth.user?.role !== 'owner') {
       navigate('/login');
       return;
     }
@@ -30,6 +31,10 @@ export default function OwnerDashboard() {
   }, [auth, navigate]);
 
   if (!auth.isAuthenticated) return null;
+
+  if (auth.user?.role !== 'owner') {
+    return <div className="container"><p className="form-error">Access denied. Owner dashboard is restricted.</p></div>;
+  }
 
   return (
     <div className="container">
@@ -66,6 +71,17 @@ export default function OwnerDashboard() {
                       <Link to={`/product/${product._id}`} className="btn">View</Link>
                       <span style={{ fontWeight: 700 }}>{product.likes?.length || 0} likes</span>
                     </div>
+                    <div>
+                      <img
+                        src={getProductImage(product)}
+                        alt={product.name}
+                        style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10 }}
+                        onError={(event) => {
+                          event.target.onerror = null;
+                          event.target.src = '/placeholder.png';
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -92,8 +108,19 @@ export default function OwnerDashboard() {
                     </div>
                     <div style={{ marginTop: 14 }}>
                       {order.orderItems.map((item) => (
-                        <div key={item.product} style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
-                          <img src={item.image || '/placeholder.png'} alt={item.name} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10 }} />
+                        <div
+                          key={typeof item.product === 'object' && item.product !== null ? item.product._id || item.name : item.product || item.name}
+                          style={{ display: 'flex', gap: 12, marginBottom: 10 }}
+                        >
+                          <img
+                            src={getProductImage(typeof item.product === 'object' && item.product !== null ? item.product : item)}
+                            alt={item.name}
+                            style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10 }}
+                            onError={(event) => {
+                              event.target.onerror = null;
+                              event.target.src = '/placeholder.png';
+                            }}
+                          />
                           <div>
                             <div>{item.name}</div>
                             <div className="muted">Qty: {item.quantity} · ₹{item.price}</div>
